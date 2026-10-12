@@ -20,8 +20,10 @@ if not SECRET_KEY:
 if not ALGORITHM:
     raise ValueError("SECRET_KEY environment variable is not set")
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(
+    tokenUrl="/v1/auth/login", auto_error=False
+)
 
 
 def create_token_access(user_id: int):
@@ -51,7 +53,9 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
 ):
     current_user_id = verify_token_access(token)
-    current_user = await db.scalar(select(User).where(User.id == current_user_id,User.is_deleted.is_(False)))
+    current_user = await db.scalar(
+        select(User).where(User.id == current_user_id, User.is_deleted.is_(False))
+    )
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -66,7 +70,9 @@ async def get_current_user_optional(
     if not token:
         return None
     current_user_id = verify_token_access(token)
-    current_user = await db.scalar(select(User).where(User.id == current_user_id,User.is_deleted.is_(False)))
+    current_user = await db.scalar(
+        select(User).where(User.id == current_user_id, User.is_deleted.is_(False))
+    )
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

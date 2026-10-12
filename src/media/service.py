@@ -239,7 +239,7 @@ class MediaService:
         )
         db.add(new_media)
         await db.flush()
-        
+
         for genre in data.get("genres"):
             genre_media_object = MediaGenre(media_id=new_media.id, genre_id=genre["id"])
             db.add(genre_media_object)
@@ -256,7 +256,7 @@ class MediaService:
                 )
             )
             return existing_media.id
-        
+
         return new_media.id
 
     @staticmethod

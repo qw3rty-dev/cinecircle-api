@@ -12,7 +12,6 @@ async def genre_sync_job():
             try:
                 await MediaService.sync_genres(client, db)
             except TMDBServiceError:
-                # raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,detail= "TMDB service didn't respond")
                 print("Genre sync failed: TMDB service didn't respond")
                 return
 

@@ -27,5 +27,5 @@ class WatchlistResponse(BaseModel):
 
 class PaginatedWatchlistResponse(BaseModel):
     meta: PaginationMeta
-    watchlist: list[WatchlistResponse]
+    results: list[WatchlistResponse]
     model_config = ConfigDict(from_attributes=True)

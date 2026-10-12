@@ -10,9 +10,7 @@ resend.api_key = RESEND_API_KEY
 
 
 def send_email(to, subject, html):
-    resend.Emails.send(
-        {"from": FROM_EMAIL, "to": to, "subject": subject, "html": html}
-    )
+    resend.Emails.send({"from": FROM_EMAIL, "to": to, "subject": subject, "html": html})
 
 
 def send_verification_mail(username, email, verification_code):

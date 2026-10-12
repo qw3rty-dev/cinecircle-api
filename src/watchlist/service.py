@@ -86,7 +86,7 @@ class WatchListService:
         watchlist = (await db.scalars(query)).all()
         meta = generate_meta(page, limit, total)
 
-        return {"meta": meta, "watchlist": watchlist}
+        return {"meta": meta, "results": watchlist}
 
     async def change_status(
         self, id: int, new_status: str, db: AsyncSession, current_user: User

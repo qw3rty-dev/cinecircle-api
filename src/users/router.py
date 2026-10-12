@@ -15,13 +15,16 @@ from .schemas import (
 )
 from .service import UserService
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["connections"])
 
 user_service = UserService()
 
 
 @router.post(
-        "/{user_id}/follow", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+    "/{user_id}/follow",
+    response_model=MessageResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def follow_user(
     user_id: int,
     db: AsyncSession = Depends(get_db),
@@ -31,7 +34,8 @@ async def follow_user(
 
 
 @router.get(
-        "/search", response_model=PaginatedUserResponse, status_code=status.HTTP_200_OK)
+    "/search", response_model=PaginatedUserResponse, status_code=status.HTTP_200_OK
+)
 async def search_users(
     search: str,
     limit: int = Query(default=20, ge=1, le=100),
@@ -44,7 +48,10 @@ async def search_users(
 
 
 @router.get(
-        "/follow-requests", response_model=PaginatedFollowRequestResponse, status_code=status.HTTP_200_OK)
+    "/follow-requests",
+    response_model=PaginatedFollowRequestResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def show_follow_requests(
     search: str | None = None,
     limit: int = Query(default=20, ge=1, le=100),
@@ -60,7 +67,10 @@ async def show_follow_requests(
 
 
 @router.get(
-        "/{user_id}/followers", response_model=PaginatedUserResponse, status_code=status.HTTP_200_OK)
+    "/{user_id}/followers",
+    response_model=PaginatedUserResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def show_follower_list(
     user_id: int,
     search: str | None = None,
@@ -77,7 +87,10 @@ async def show_follower_list(
 
 
 @router.get(
-        "/{user_id}/following", response_model=PaginatedUserResponse, status_code=status.HTTP_200_OK)
+    "/{user_id}/following",
+    response_model=PaginatedUserResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def show_following_list(
     user_id: int,
     search: str | None = None,
@@ -104,7 +117,10 @@ async def show_user_profile(
 
 
 @router.patch(
-        "/follow-requests/bulk/{action}", response_model=MessageResponse, status_code=status.HTTP_200_OK)
+    "/follow-requests/bulk/{action}",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def request_action_bulk(
     action: BulkAction,
     db: AsyncSession = Depends(get_db),
@@ -114,8 +130,10 @@ async def request_action_bulk(
 
 
 @router.patch(
-        "/follow-requests/{request_id}/{action}", response_model=MessageResponse, status_code=status.HTTP_200_OK
-        )
+    "/follow-requests/{request_id}/{action}",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def request_action(
     request_id: int,
     action: Action,

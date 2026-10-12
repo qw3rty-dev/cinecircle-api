@@ -253,20 +253,20 @@ class ReviewService:
             )
 
         return {
-                "id": review.id,
-                "rating": review.rating,
-                "content": review.content,
-                "upvotes": 0,
-                "downvotes": 0,
-                "my_vote": None,
-                "created_at": review.created_at,
-                "media": {
-                    "id": review.media.id,
-                    "title": review.media.title,
-                    "media_type": review.media.media_type,
-                    "premiere_date": review.media.premiere_date,
-                },
-            }
+            "id": review.id,
+            "rating": review.rating,
+            "content": review.content,
+            "upvotes": 0,
+            "downvotes": 0,
+            "my_vote": None,
+            "created_at": review.created_at,
+            "media": {
+                "id": review.media.id,
+                "title": review.media.title,
+                "media_type": review.media.media_type,
+                "premiere_date": review.media.premiere_date,
+            },
+        }
 
     async def vote(
         self, review_id: int, vote_type: VoteType, db: AsyncSession, current_user: User
@@ -407,7 +407,7 @@ class ReviewService:
             "user": {"id": review.user_id, "username": review.user.username},
         }
 
-        return {"meta": meta, "review": review, "comments": results}
+        return {"meta": meta, "review": review, "results": results}
 
     async def get_reviews(
         self,
@@ -453,7 +453,7 @@ class ReviewService:
             "media_type": media.media_type,
             "premiere_date": media.premiere_date,
         }
-        return {"meta": meta, "media": media, "reviews": results}
+        return {"meta": meta, "media": media, "results": results}
 
     async def delete_comment(
         self, comment_id: int, db: AsyncSession, current_user: User
@@ -512,7 +512,7 @@ class ReviewService:
 
         meta = generate_meta(page, limit, total)
 
-        return {"meta": meta, "reviews": results}
+        return {"meta": meta, "results": results}
 
     async def get_review_by_id(
         self, review_id: int, db: AsyncSession, current_user: User

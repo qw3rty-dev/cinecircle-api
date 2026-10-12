@@ -48,7 +48,6 @@ async def get_users(
         sort_by,
         sort_order,
         db,
-        current_admin,
     )
 
 

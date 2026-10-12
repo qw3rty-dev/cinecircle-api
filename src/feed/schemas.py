@@ -8,15 +8,15 @@ from src.reviews.schemas import MediaResponse, ReviewInfo
 class RecommendationResponse(BaseModel):
     page: int
     results: list[MovieResult | TvResult]
-    model_config  = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ReviewsFeed(ReviewInfo):
     media: MediaResponse
-    model_config  = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PaginatedReviewResponse(BaseModel):
     meta: PaginationMeta
     reviews: list[ReviewsFeed]
-    model_config  = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)

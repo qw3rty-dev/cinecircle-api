@@ -36,7 +36,7 @@ class AuthorResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ReviewInfo(BaseModel):                        ## single review, single author
+class ReviewInfo(BaseModel):  ## single review, single author
     id: int
     user: AuthorResponse
     rating: int
@@ -48,20 +48,26 @@ class ReviewInfo(BaseModel):                        ## single review, single aut
     model_config = ConfigDict(from_attributes=True)
 
 
-class ReviewResponse(BaseModel):              ## single media, single author (used in get review by id)
+class ReviewResponse(
+    BaseModel
+):  ## single media, single author (used in get review by id)
     media: MediaResponse
     review: ReviewInfo
     model_config = ConfigDict(from_attributes=True)
 
 
-class PaginatedReviewResponse(BaseModel):               ## single media, multiple authors reviews (used in get reviews by media id)
+class PaginatedReviewResponse(
+    BaseModel
+):  ## single media, multiple authors reviews (used in get reviews by media id)
     meta: PaginationMeta
     media: MediaResponse
-    reviews: list[ReviewInfo]
+    results: list[ReviewInfo]
     model_config = ConfigDict(from_attributes=True)
 
 
-class MyReviewResponse(BaseModel):      ## single author(current_user), single media (used in add & edit review)
+class MyReviewResponse(
+    BaseModel
+):  ## single author(current_user), single media (used in add & edit review)
     id: int
     rating: int
     content: str
@@ -73,9 +79,11 @@ class MyReviewResponse(BaseModel):      ## single author(current_user), single m
     model_config = ConfigDict(from_attributes=True)
 
 
-class PaginatedMyReviewResponse(BaseModel):         ## multiple reviews of multiple media made by current user (used in get my reviews)
+class PaginatedMyReviewResponse(
+    BaseModel
+):  ## multiple reviews of multiple media made by current user (used in get my reviews)
     meta: PaginationMeta
-    reviews: list[MyReviewResponse]
+    results: list[MyReviewResponse]
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -95,10 +103,8 @@ class NewCommentResponse(CommentResponse):
 class PaginatedCommentResponse(BaseModel):
     meta: PaginationMeta
     review: ReviewInfo
-    comments: list[CommentResponse]
+    results: list[CommentResponse]
     model_config = ConfigDict(from_attributes=True)
-
-
 
 
 class VoteResponse(BaseModel):

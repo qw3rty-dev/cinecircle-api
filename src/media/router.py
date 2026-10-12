@@ -26,7 +26,8 @@ media_service = MediaService()
 
 @router.get(
     "/search/{search}",
-    response_model=SearchMovieResponse | SearchTvResponse | SearchAllResponse, status_code=status.HTTP_200_OK
+    response_model=SearchMovieResponse | SearchTvResponse | SearchAllResponse,
+    status_code=status.HTTP_200_OK,
 )
 async def search_media(
     request: Request,
@@ -47,7 +48,11 @@ async def search_media(
         )
 
 
-@router.get("/trending/movie", response_model=TrendingMovieResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/trending/movie",
+    response_model=TrendingMovieResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def trending_movies(
     request: Request, page: int = Query(default=1), db: AsyncSession = Depends(get_db)
 ):
@@ -62,7 +67,9 @@ async def trending_movies(
         )
 
 
-@router.get("/trending/tv", response_model=TrendingTvResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/trending/tv", response_model=TrendingTvResponse, status_code=status.HTTP_200_OK
+)
 async def trending_tv(
     request: Request, page: int = Query(default=1), db: AsyncSession = Depends(get_db)
 ):
@@ -77,7 +84,9 @@ async def trending_tv(
         )
 
 
-@router.get("/{id}", response_model=MovieResult | TvResult, status_code=status.HTTP_200_OK)
+@router.get(
+    "/{id}", response_model=MovieResult | TvResult, status_code=status.HTTP_200_OK
+)
 async def get_by_id(
     request: Request, id: int, media_type: MediaType, db: AsyncSession = Depends(get_db)
 ):
@@ -92,7 +101,11 @@ async def get_by_id(
         )
 
 
-@router.post("/tmdb_id/activity/{activity}", response_model=MessageResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/{tmdb_id}/activity/{activity}",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def set_media_activity(
     request: Request,
     tmdb_id: int,
@@ -101,8 +114,13 @@ async def set_media_activity(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
-    client = request.app.state.http_client
-    return await media_service.set_media_activity(
-        tmdb_id, media_type, activity, db, current_user, client
-    )
+    try:
+        client = request.app.state.http_client
+        return await media_service.set_media_activity(
+            tmdb_id, media_type, activity, db, current_user, client
+        )
+    except TMDBServiceError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="TMDB service didn't respond",
+        )

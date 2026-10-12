@@ -39,7 +39,7 @@ router = APIRouter(prefix="/reviews", tags=["reviews"])
 review_service = ReviewService()
 
 
-@router.post("/", response_model=MyReviewResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=MyReviewResponse, status_code=status.HTTP_201_CREATED)
 async def add_review(
     request: Request,
     data: CreateReviewRequest,
@@ -65,7 +65,11 @@ async def add_review(
         )
 
 
-@router.post("/{review_id}/comments", response_model=NewCommentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{review_id}/comments",
+    response_model=NewCommentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def comment(
     review_id: int,
     comment: CreateComment,
@@ -76,7 +80,9 @@ async def comment(
     return await review_service.comment(review_id, comment.content, db, current_user)
 
 
-@router.put("/{review_id}/vote", response_model=VoteResponse, status_code=status.HTTP_200_OK)
+@router.put(
+    "/{review_id}/vote", response_model=VoteResponse, status_code=status.HTTP_200_OK
+)
 async def vote(
     review_id: int,
     vote_type: VoteType,
@@ -87,7 +93,11 @@ async def vote(
     return await review_service.vote(review_id, vote_type, db, current_user)
 
 
-@router.get("/media/{media_id}", response_model=PaginatedReviewResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/media/{media_id}",
+    response_model=PaginatedReviewResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def get_media_reviews(
     media_id: int,
     search: str | None = Query(default=None),
@@ -116,8 +126,8 @@ async def get_media_reviews(
 
 
 @router.get(
-        "/me", response_model=PaginatedMyReviewResponse, status_code=status.HTTP_200_OK
-        )
+    "/me", response_model=PaginatedMyReviewResponse, status_code=status.HTTP_200_OK
+)
 async def get_my_reviews(
     search: str | None = Query(default=None),
     rating: Rating | None = Query(default=None, ge=1, le=5),
@@ -134,8 +144,8 @@ async def get_my_reviews(
 
 
 @router.get(
-        "/{review_id}", response_model=ReviewResponse, status_code=status.HTTP_200_OK
-        )
+    "/{review_id}", response_model=ReviewResponse, status_code=status.HTTP_200_OK
+)
 async def get_review(
     review_id: int,
     db: AsyncSession = Depends(get_db),
@@ -145,8 +155,10 @@ async def get_review(
 
 
 @router.get(
-        "/{review_id}/comments", response_model=PaginatedCommentResponse, status_code=status.HTTP_200_OK
-        )
+    "/{review_id}/comments",
+    response_model=PaginatedCommentResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def get_comments(
     review_id: int,
     search: str | None = Query(default=None),
@@ -163,8 +175,8 @@ async def get_comments(
 
 
 @router.patch(
-        "/{review_id}", response_model=MyReviewResponse, status_code=status.HTTP_200_OK
-        )
+    "/{review_id}", response_model=MyReviewResponse, status_code=status.HTTP_200_OK
+)
 async def edit_review(
     review_id: int,
     update: UpdateReviewRequest,
@@ -175,8 +187,10 @@ async def edit_review(
 
 
 @router.patch(
-        "/{comment_id}/comments", response_model=CommentResponse, status_code=status.HTTP_200_OK
-        )
+    "/{comment_id}/comments",
+    response_model=CommentResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def edit_comment(
     comment_id: int,
     update: UpdateCommentRequest,

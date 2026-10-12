@@ -16,7 +16,7 @@ router = APIRouter(prefix="/feed", tags=["feed"])
 feed_services = FeedService()
 
 
-@router.get("/", response_model=RecommendationResponse, status_code=status.HTTP_200_OK )
+@router.get("", response_model=RecommendationResponse, status_code=status.HTTP_200_OK)
 async def get_recommendations(
     request: Request,
     media_type: MediaType | None = Query(default=None),
@@ -37,7 +37,11 @@ async def get_recommendations(
         )
 
 
-@router.get("/following/activity", response_model=PaginatedReviewResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/following/activity",
+    response_model=PaginatedReviewResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def get_following_activity(
     limit: int = Query(default=20, ge=1, le=100),
     page: int = Query(default=1, ge=1),

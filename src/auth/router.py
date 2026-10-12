@@ -73,10 +73,10 @@ async def logout(
 async def send_verification_code(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
 
-    return await auth_service.send_verification_code(background_tasks,current_user, db)
+    return await auth_service.send_verification_code(background_tasks, current_user, db)
 
 
 @router.post(
@@ -115,10 +115,15 @@ async def change_password(
 @router.post(
     "/forgot_password", response_model=MessageResponse, status_code=status.HTTP_200_OK
 )
-async def forgot_password(email: ForgotPassword, background_tasks: BackgroundTasks,
- db: AsyncSession = Depends(get_db)):
+async def forgot_password(
+    email: ForgotPassword,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
 
-    return await auth_service.forgot_password(email=email.email,background_tasks=background_tasks, db=db)
+    return await auth_service.forgot_password(
+        email=email.email, background_tasks=background_tasks, db=db
+    )
 
 
 @router.post(

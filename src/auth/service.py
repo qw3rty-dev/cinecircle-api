@@ -108,7 +108,11 @@ class AuthService:
         user_id = verify_refresh_token(refresh_token)
         user = await db.get(User, user_id)
 
-        if not user or not user.refresh_token or not verify_password(refresh_token,user.refresh_token):
+        if (
+            not user
+            or not user.refresh_token
+            or not verify_password(refresh_token, user.refresh_token)
+        ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
             )
@@ -125,7 +129,8 @@ class AuthService:
         return {"message": "Logged out successfully"}
 
     async def send_verification_code(
-            self,background_tasks:BackgroundTasks, current_user: User, db: AsyncSession):
+        self, background_tasks: BackgroundTasks, current_user: User, db: AsyncSession
+    ):
 
         if current_user.is_verified:
             raise HTTPException(
@@ -140,7 +145,8 @@ class AuthService:
             send_verification_mail,
             current_user.username,
             current_user.email,
-            verification_code)
+            verification_code,
+        )
 
         return {"message": "Verification code sent."}
 
@@ -174,7 +180,9 @@ class AuthService:
 
         return {"message": "Verification done."}
 
-    async def forgot_password(self, email: str, background_tasks: BackgroundTasks, db: AsyncSession):
+    async def forgot_password(
+        self, email: str, background_tasks: BackgroundTasks, db: AsyncSession
+    ):
 
         user = await db.scalar(select(User).where(User.email == email))
         if not user:
@@ -188,10 +196,8 @@ class AuthService:
 
         await db.commit()
         background_tasks.add_task(
-            send_password_reset_otp,
-            user.username,
-            user.email,
-            verification_code)
+            send_password_reset_otp, user.username, user.email, verification_code
+        )
 
         return {
             "message": "If an account with that email exists,a password reset email has been sent"

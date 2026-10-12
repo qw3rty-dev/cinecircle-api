@@ -18,7 +18,7 @@ class AdminService:
         page: int,
         sort_by: SortUsers,
         sort_order: SortOrder,
-        db: AsyncSession
+        db: AsyncSession,
     ):
 
         query = select(User)

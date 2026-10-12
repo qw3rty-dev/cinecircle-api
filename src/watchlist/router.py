@@ -19,7 +19,7 @@ router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 watchlist_service = WatchListService()
 
 
-@router.post("/", response_model=WatchlistResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=WatchlistResponse, status_code=status.HTTP_201_CREATED)
 async def add_to_watchlist(
     data: AddToWatchlistRequest,
     request: Request,
@@ -36,7 +36,9 @@ async def add_to_watchlist(
         raise HTTPException(status_code=503, detail="TMDB service didn't respond")
 
 
-@router.get("/", response_model=PaginatedWatchlistResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "", response_model=PaginatedWatchlistResponse, status_code=status.HTTP_200_OK
+)
 async def fetch_watchlist(
     search: str | None = Query(default=None),
     status: WatchlistStatus | None = Query(default=None),
@@ -53,7 +55,9 @@ async def fetch_watchlist(
     )
 
 
-@router.patch("/{id}/status", response_model=WatchlistResponse, status_code=status.HTTP_200_OK)
+@router.patch(
+    "/{id}/status", response_model=WatchlistResponse, status_code=status.HTTP_200_OK
+)
 async def change_watching_status(
     id: int,
     update: UpdateWatchlistRequest,

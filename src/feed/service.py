@@ -26,7 +26,7 @@ async def following_activity_reviews(
         await db.scalars(
             select(Follow.following_id)
             .join(Follow.following)
-            .where(Follow.follower_id == current_user.id,User.is_deleted.is_(False))
+            .where(Follow.follower_id == current_user.id, User.is_deleted.is_(False))
         )
     ).all()
     if not following:
@@ -81,7 +81,7 @@ async def get_following_activity(
         await db.scalars(
             select(Follow.following_id)
             .join(Follow.following)
-            .where(Follow.follower_id == current_user.id,User.is_deleted.is_(False))
+            .where(Follow.follower_id == current_user.id, User.is_deleted.is_(False))
         )
     ).all()
     if not following:
