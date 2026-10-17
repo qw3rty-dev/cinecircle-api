@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.common.utils import generate_meta
+from src.common.utils import generate_meta, str_to_date
 from src.enums import (
     MediaActivityType,
     MediaType,
@@ -18,8 +18,9 @@ from src.enums import (
 )
 from src.media.service import MediaService
 from src.models import Comment, Media, MediaActivity, Review, ReviewVote, User
+from src.services.tmdb.service import get_by_id
 
-from .schemas import UpdateCommentRequest, UpdateReviewRequest
+from .schemas import MediaMetadata, UpdateCommentRequest, UpdateReviewRequest
 
 
 async def extract_votes_of_reviews(
@@ -113,8 +114,9 @@ async def get_review_comments_query(
     return comments, review, total
 
 
-async def extract_reviews(
-    media_id: int,
+async def extract_reviews_by_tmdb_id(
+    tmdb_id: int,
+    media_type: MediaType,
     search: str,
     author: str,
     rating: Rating,
@@ -123,14 +125,22 @@ async def extract_reviews(
     limit: int,
     page: int,
     db: AsyncSession,
+    client: httpx.AsyncClient
 ):
 
-    media = await db.scalar(select(Media).where(Media.id == media_id))
+    media = await db.scalar(select(Media).where(Media.tmdb_id == tmdb_id, Media.media_type == media_type))
     if not media:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Media not found"
+        media_raw = await get_by_id(client, tmdb_id, media_type)
+        media = MediaMetadata(
+            tmdb_id= media_raw.get('id'),
+            title = media_raw.get('title') or media_raw.get('name'),
+            media_type = media_type,
+            premiere_date= str_to_date(media_raw.get("release_date") or media_raw.get("first_air_date"))
+
         )
-    query = select(Review).where(Review.media_id == media_id)
+        return [], media, 0
+    
+    query = select(Review).where(Review.media_id == media.id)
     query = (
         query.join(Review.user)
         .options(selectinload(Review.user))
@@ -249,7 +259,7 @@ class ReviewService:
         except IntegrityError:
             await db.rollback()
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="review already exists"
+                status_code=status.HTTP_409_CONFLICT, detail="Review already exists"
             )
 
         return {
@@ -409,9 +419,11 @@ class ReviewService:
 
         return {"meta": meta, "review": review, "results": results}
 
+
     async def get_reviews(
         self,
-        media_id: int,
+        tmdb_id: int,
+        media_type: MediaType,
         search: str,
         author: str,
         rating: Rating,
@@ -421,10 +433,11 @@ class ReviewService:
         page: int,
         db: AsyncSession,
         current_user: User | None,
+        client: httpx.AsyncClient
     ):
 
-        reviews, media, total = await extract_reviews(
-            media_id, search, author, rating, sort_by, sort_order, limit, page, db
+        reviews, media, total = await extract_reviews_by_tmdb_id(
+            tmdb_id,media_type, search, author, rating, sort_by, sort_order, limit, page, db, client
         )
         review_ids = [review.id for review in reviews]
         vote_counts, my_vote_types = await extract_votes_of_reviews(
@@ -448,7 +461,7 @@ class ReviewService:
 
         meta = generate_meta(page, limit, total)
         media = {
-            "id": media.id,
+            "tmdb_id": media.tmdb_id,
             "title": media.title,
             "media_type": media.media_type,
             "premiere_date": media.premiere_date,

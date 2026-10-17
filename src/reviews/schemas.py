@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -36,6 +36,13 @@ class AuthorResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MediaMetadata(BaseModel):
+    tmdb_id: int
+    title: str
+    media_type: MediaType
+    premiere_date: date | None
+    model_config = ConfigDict(from_attributes=True)
+
 class ReviewInfo(BaseModel):  ## single review, single author
     id: int
     user: AuthorResponse
@@ -58,9 +65,9 @@ class ReviewResponse(
 
 class PaginatedReviewResponse(
     BaseModel
-):  ## single media, multiple authors reviews (used in get reviews by media id)
+):  ## single media, multiple authors reviews (used in get reviews by tmdb id)
     meta: PaginationMeta
-    media: MediaResponse
+    media: MediaMetadata
     results: list[ReviewInfo]
     model_config = ConfigDict(from_attributes=True)
 

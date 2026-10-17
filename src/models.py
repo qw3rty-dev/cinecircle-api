@@ -5,6 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db import Base
 from src.enums import (
+    CodePurpose,
     MediaActivityType,
     MediaType,
     RequestStatus,
@@ -33,6 +34,7 @@ class User(Base):
         DateTime(timezone=True), nullable=True
     )
     verification_code: Mapped[str | None] = mapped_column(nullable=True)
+    code_purpose: Mapped[CodePurpose| None] = mapped_column(default=None,nullable=True)
     verification_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -79,7 +81,7 @@ class Media(Base):
     __tablename__ = "media"
     __table_args__ = (UniqueConstraint("tmdb_id", "media_type"),)
     id: Mapped[int] = mapped_column(primary_key=True)
-    tmdb_id: Mapped[int | None] = mapped_column(nullable=True)
+    tmdb_id: Mapped[int] = mapped_column(nullable=False)
     media_type: Mapped[MediaType] = mapped_column(nullable=False)
     title: Mapped[str] = mapped_column(nullable=False)
     premiere_date: Mapped[date | None] = mapped_column(nullable=True)

@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db import get_db
 from src.enums import (
+    MediaType,
     Rating,
     SortComments,
     SortMyReviews,
@@ -94,12 +95,14 @@ async def vote(
 
 
 @router.get(
-    "/media/{media_id}",
+    "/media/{tmdb_id}",
     response_model=PaginatedReviewResponse,
     status_code=status.HTTP_200_OK,
 )
-async def get_media_reviews(
-    media_id: int,
+async def get_media_reviews_by_tmdb_id(
+    request: Request,
+    tmdb_id: int,
+    media_type: MediaType,
     search: str | None = Query(default=None),
     author: str | None = Query(default=None),
     rating: Rating | None = Query(default=None, ge=1, le=5),
@@ -108,21 +111,29 @@ async def get_media_reviews(
     limit: int | None = Query(default=20, ge=1, le=100),
     page: int | None = Query(default=1, ge=1),
     db: AsyncSession = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User | None = Depends(get_current_user_optional)
 ):
-
-    return await review_service.get_reviews(
-        media_id,
-        search,
-        author,
-        rating,
-        sort_by,
-        sort_order,
-        limit,
-        page,
-        db,
-        current_user,
-    )
+    try:
+        client = request.app.state.http_client
+        return await review_service.get_reviews(
+            tmdb_id,
+            media_type,
+            search,
+            author,
+            rating,
+            sort_by,
+            sort_order,
+            limit,
+            page,
+            db,
+            current_user,
+            client,
+        )
+    except TMDBServiceError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="TMDB service didn't respond.",
+        )
 
 
 @router.get(

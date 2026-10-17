@@ -83,3 +83,8 @@ class MediaActivityType(str, Enum):
     loved = "loved"
     liked = "liked"
     disliked = "disliked"
+
+
+class CodePurpose(str, Enum):
+    password_reset = "password_reset"
+    verification_otp = "verification_otp"

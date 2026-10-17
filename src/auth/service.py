@@ -5,6 +5,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.enums import CodePurpose
 from src.models import User
 from src.security.jwt_handler import (
     create_refresh_token,
@@ -37,13 +38,13 @@ class AuthService:
         )
         if existing_username:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="username already exists"
+                status_code=status.HTTP_409_CONFLICT, detail="Username already exists"
             )
 
         existing_email = await db.scalar(select(User).where(User.email == email))
         if existing_email:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="email already exists"
+                status_code=status.HTTP_409_CONFLICT, detail="Email already exists"
             )
 
         new_user = User(
@@ -60,7 +61,7 @@ class AuthService:
         except IntegrityError:
             await db.rollback()
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="user already exists"
+                status_code=status.HTTP_409_CONFLICT, detail="User already exists"
             )
         return new_user
 
@@ -69,7 +70,7 @@ class AuthService:
         user = await db.scalar(select(User).where(User.email == email))
         if not user or not verify_password(password, user.password_hash):
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
             )
         if user.is_deleted:
             if user.deleted_at + timedelta(days=30) <= datetime.now(UTC):
@@ -134,12 +135,13 @@ class AuthService:
 
         if current_user.is_verified:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="User already verified."
+                status_code=status.HTTP_409_CONFLICT, detail="User already verified"
             )
 
         verification_code, expires_at = verification_code_generate()
         current_user.verification_code = hash_password(verification_code)
         current_user.verification_expires_at = expires_at
+        current_user.code_purpose = CodePurpose.verification_otp
         await db.commit()
         background_tasks.add_task(
             send_verification_mail,
@@ -148,7 +150,7 @@ class AuthService:
             verification_code,
         )
 
-        return {"message": "Verification code sent."}
+        return {"message": "Verification code sent"}
 
     async def confirm_verification_code(
         self, verification_otp: str, current_user: User, db: AsyncSession
@@ -156,13 +158,13 @@ class AuthService:
 
         if current_user.is_verified:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="User already verified."
+                status_code=status.HTTP_409_CONFLICT, detail="User already verified"
             )
 
-        if not current_user.verification_expires_at:
+        if not current_user.verification_expires_at or not current_user.code_purpose == CodePurpose.verification_otp:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Invalid or expired verification code.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification code",
             )
 
         if current_user.verification_expires_at < datetime.now(
@@ -170,15 +172,16 @@ class AuthService:
         ) or not verify_password(verification_otp, current_user.verification_code):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired verification code.",
+                detail="Invalid or expired verification code",
             )
 
         current_user.is_verified = True
         current_user.verification_code = None
         current_user.verification_expires_at = None
+        current_user.code_purpose = None
         await db.commit()
 
-        return {"message": "Verification done."}
+        return {"message": "Verification done"}
 
     async def forgot_password(
         self, email: str, background_tasks: BackgroundTasks, db: AsyncSession
@@ -187,12 +190,13 @@ class AuthService:
         user = await db.scalar(select(User).where(User.email == email))
         if not user:
             return {
-                "message": "If an account with that email exists,a password reset email has been sent"
+                "message": "If an account with that email exists,a password reset email has been sent."
             }
 
         verification_code, expires_at = verification_code_generate()
         user.verification_code = hash_password(verification_code)
         user.verification_expires_at = expires_at
+        user.code_purpose = CodePurpose.password_reset
 
         await db.commit()
         background_tasks.add_task(
@@ -200,7 +204,7 @@ class AuthService:
         )
 
         return {
-            "message": "If an account with that email exists,a password reset email has been sent"
+            "message": "If an account with that email exists,a password reset email has been sent."
         }
 
     async def reset_password(
@@ -212,23 +216,24 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid credentials"
             )
-        if user.verification_expires_at is None:
+        if user.verification_expires_at is None or not user.code_purpose == CodePurpose.password_reset:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired verification code.",
+                detail="Invalid or expired verification code",
             )
         if user.verification_expires_at < datetime.now(UTC) or not verify_password(
             otp, user.verification_code
         ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired verification code.",
+                detail="Invalid or expired verification code",
             )
 
         user.password_hash = hash_password(new_password)
         user.refresh_token = None
         user.verification_code = None
         user.verification_expires_at = None
+        user.code_purpose = None
         await db.commit()
 
         return {"message": "Password changed"}
@@ -269,12 +274,6 @@ class AuthService:
 
         await db.commit()
 
-        print(
-            {
-                "deactivated_accounts_deleted": deactivated_accounts_deleted.rowcount,
-                "unverified_accounts_deleted": unverified_accounts_deleted.rowcount,
-            }
-        )
         return {
             "deactivated_accounts_deleted": deactivated_accounts_deleted.rowcount,
             "unverified_accounts_deleted": unverified_accounts_deleted.rowcount,
