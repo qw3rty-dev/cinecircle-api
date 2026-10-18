@@ -25,7 +25,7 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
 
-print("Alembic tables:", list(Base.metadata.tables.keys()))
+# print("Alembic tables:", list(Base.metadata.tables.keys()))
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

@@ -63,7 +63,13 @@ async def check_profile_access(user_id: int, current_user: User, db: AsyncSessio
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-
+    if not current_user.is_verified:
+        if user.id == current_user.id:
+            return user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email to use this feature.",
+        )
     if not user.is_private or user.id == current_user.id:
         return user
 
@@ -217,21 +223,29 @@ class UserService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
-
         my_profile = current_user.id == id
-        is_following = False
 
-        if not my_profile and user.is_private:
-            is_following = await db.scalar(
-                select(
-                    exists().where(
-                        Follow.follower_id == current_user.id,
-                        Follow.following_id == user.id,
+        if not current_user.is_verified:
+            if not my_profile:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Please verify your email to use this feature.",
+                 )
+            can_view_content = True
+                
+        else:
+            is_following = False
+            if not my_profile and user.is_private:
+                is_following = await db.scalar(
+                    select(
+                        exists().where(
+                            Follow.follower_id == current_user.id,
+                            Follow.following_id == user.id,
+                        )
                     )
                 )
-            )
 
-        can_view_content = my_profile or not user.is_private or is_following
+            can_view_content = my_profile or not user.is_private or is_following
         followers_len = await db.scalar(
             select(func.count())
             .join(Follow.follower)
@@ -303,7 +317,7 @@ class UserService:
         existing_follow_request = await db.scalar(
             select(FollowRequest).where(
                 FollowRequest.follower_id == current_user.id,
-                Follow.following_id == user_id,
+                FollowRequest.following_id == user_id,
             )
         )
         if user.is_private:
@@ -318,7 +332,7 @@ class UserService:
                 db.add(new_follow_request)
                 await db.commit()
                 await db.refresh(new_follow_request)
-                return {"message": "follow request sent"}
+                return {"message": "Follow request sent"}
             except IntegrityError:
                 await db.rollback()
                 raise HTTPException(
