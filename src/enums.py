@@ -88,3 +88,8 @@ class MediaActivityType(str, Enum):
 class CodePurpose(str, Enum):
     password_reset = "password_reset"
     verification_otp = "verification_otp"
+
+class RelationshipStatus(str, Enum):
+    self = "self"
+    following = "following"
+    follow_request_sent = "follow_request_sent"

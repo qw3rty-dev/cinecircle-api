@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 from src.common.schemas import PaginationMeta
+from src.enums import RelationshipStatus
 
 
 class UserProfile(BaseModel):
@@ -11,6 +12,7 @@ class UserProfile(BaseModel):
     followers: int
     following: int
     my_profile: bool
+    relationship_status: RelationshipStatus|None
     can_view_content: bool
     model_config = ConfigDict(from_attributes=True)
 

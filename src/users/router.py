@@ -61,7 +61,24 @@ async def show_follow_requests(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await user_service.show_follow_requests(
+    return await user_service.show_follow_requests_received(
+        search, limit, page, sort_by, sort_order, db, current_user
+    )
+@router.get(
+    "/follow-requests/sent",
+    response_model=PaginatedFollowRequestResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def show_follow_requests_sent(
+    search: str | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
+    page: int = Query(default=1, ge=1),
+    sort_by: SortUsers = Query(default=SortUsers.created_at),
+    sort_order: SortOrder = Query(default=SortOrder.desc),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await user_service.show_follow_requests_sent(
         search, limit, page, sort_by, sort_order, db, current_user
     )
 
@@ -147,7 +164,7 @@ async def request_action(
 async def privacy_preferences(
     preference: PrivacyPreference,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_verified_user),
+    current_user: User = Depends(get_current_user),
 ):
     return await user_service.privacy_preferences(
         preference.is_private, db, current_user

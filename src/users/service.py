@@ -5,11 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.common.utils import generate_meta
-from src.enums import Action, BulkAction, SortOrder, SortUsers
+from src.enums import Action, BulkAction, RelationshipStatus, SortOrder, SortUsers
 from src.models import Follow, FollowRequest, User
 
 
-async def get_follow_requests(
+async def get_incoming_follow_requests(
     user: User,
     search: str,
     limit: int,
@@ -48,6 +48,50 @@ async def get_follow_requests(
             "request_id": request.id,
             "username": request.follower.username,
             "user_id": request.follower_id,
+            "created_at": request.created_at,
+        }
+        results.append(account)
+    return results, total
+
+async def get_outgoing_follow_requests(
+    user: User,
+    search: str,
+    limit: int,
+    page: int,
+    sort_by: SortUsers,
+    sort_order: SortOrder,
+    db: AsyncSession,
+):
+
+    query = select(FollowRequest).where(FollowRequest.follower_id == user.id)
+    query = (
+        query.join(FollowRequest.following)
+        .options(selectinload(FollowRequest.following))
+        .where(User.is_deleted.is_(False))
+    )
+    if search:
+        search = search.strip().lower()
+        query = query.where(User.username.ilike(f"{search}%"))
+
+    total = await db.scalar(select(func.count()).select_from(query.subquery()))
+    sort_fields = {
+        SortUsers.created_at: FollowRequest.created_at,
+        SortUsers.username: func.lower(User.username),
+    }
+    sort_expression = sort_fields[sort_by]
+    order = (
+        sort_expression.asc() if sort_order == SortOrder.asc else sort_expression.desc()
+    )
+    query = query.order_by(order, FollowRequest.id.desc())
+    offset = (page - 1) * limit
+    query = query.limit(limit).offset(offset)
+    request_list = (await db.scalars(query)).all()
+    results = []
+    for request in request_list:
+        account = {
+            "request_id": request.id,
+            "username": request.following.username,
+            "user_id": request.following_id,
             "created_at": request.created_at,
         }
         results.append(account)
@@ -232,11 +276,10 @@ class UserService:
                     detail="Please verify your email to use this feature.",
                  )
             can_view_content = True
+            relationship_status = "self"
                 
         else:
-            is_following = False
-            if not my_profile and user.is_private:
-                is_following = await db.scalar(
+            is_following = await db.scalar(
                     select(
                         exists().where(
                             Follow.follower_id == current_user.id,
@@ -244,8 +287,25 @@ class UserService:
                         )
                     )
                 )
-
             can_view_content = my_profile or not user.is_private or is_following
+            pending_follow_request = False
+            if not is_following:
+                pending_follow_request = await db.scalar(
+                    select(
+                        exists().where(
+                            FollowRequest.follower_id == current_user.id,
+                            FollowRequest.following_id == user.id,
+                        )
+                    )
+                )
+            relationship_status = None
+            if my_profile:
+                relationship_status = RelationshipStatus.self
+            if is_following:
+                relationship_status = RelationshipStatus.following
+            if pending_follow_request:
+                relationship_status = RelationshipStatus.follow_request_sent
+
         followers_len = await db.scalar(
             select(func.count())
             .join(Follow.follower)
@@ -256,6 +316,7 @@ class UserService:
             .join(Follow.following)
             .where(Follow.follower_id == user.id, User.is_deleted.is_(False))
         )
+        
 
         return {
             "username": user.username,
@@ -263,6 +324,7 @@ class UserService:
             "followers": followers_len,
             "following": following_len,
             "my_profile": my_profile,
+            "relationship_status": relationship_status,
             "can_view_content": can_view_content,
         }
 
@@ -472,7 +534,7 @@ class UserService:
             await db.commit()
             return {"message": "Requests rejected"}
 
-    async def show_follow_requests(
+    async def show_follow_requests_received(
         self,
         search: str,
         limit: int,
@@ -483,7 +545,25 @@ class UserService:
         current_user: User,
     ):
 
-        follow_requests, total = await get_follow_requests(
+        follow_requests, total = await get_incoming_follow_requests(
+            current_user, search, limit, page, sort_by, sort_order, db
+        )
+        meta = generate_meta(page, limit, total)
+
+        return {"meta": meta, "results": follow_requests}
+    
+    async def show_follow_requests_sent(
+        self,
+        search: str,
+        limit: int,
+        page: int,
+        sort_by: SortUsers,
+        sort_order: SortOrder,
+        db: AsyncSession,
+        current_user: User,
+    ):
+
+        follow_requests, total = await get_outgoing_follow_requests(
             current_user, search, limit, page, sort_by, sort_order, db
         )
         meta = generate_meta(page, limit, total)
