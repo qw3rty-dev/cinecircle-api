@@ -65,7 +65,7 @@ async def show_follow_requests(
         search, limit, page, sort_by, sort_order, db, current_user
     )
 @router.get(
-    "/follow-requests/sent",
+    "/me/follow-requests/sent",
     response_model=PaginatedFollowRequestResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -178,3 +178,11 @@ async def unfollow_user_or_unsend_request(
     current_user: User = Depends(get_current_verified_user),
 ):
     return await user_service.unfollow_user_or_unsend_request(user_id, db, current_user)
+
+@router.delete("/me/{user_id}/follow", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_follower(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_verified_user),
+):
+    return await user_service.remove_follower_by_user_id(user_id, db, current_user)

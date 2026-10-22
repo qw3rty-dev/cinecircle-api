@@ -276,7 +276,7 @@ class UserService:
                     detail="Please verify your email to use this feature.",
                  )
             can_view_content = True
-            relationship_status = "self"
+            relationship_status = RelationshipStatus.self
                 
         else:
             is_following = await db.scalar(
@@ -451,6 +451,30 @@ class UserService:
             return
 
         await db.delete(existing_follow)
+        await db.commit()
+        return
+
+    async def remove_follower_by_user_id(
+        self, user_id: int, db: AsyncSession, current_user: User
+    ):
+
+        existing_follower = await db.scalar(
+            select(Follow)
+            .join(Follow.following)
+            .where(
+                Follow.following_id == current_user.id,
+                Follow.follower_id == user_id,
+                User.is_deleted.is_(False),
+            )
+        )
+
+        if not existing_follower:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not following you",
+            )
+
+        await db.delete(existing_follower)
         await db.commit()
         return
 
