@@ -328,7 +328,6 @@ async def test_add_vote_user(client, mock_tmdb_media, db_session):
                                    content= "test_review")  
     review_id = review_response.json()['id']
     vote_response = await client.put(f"/v1/reviews/{review_id}/vote?vote_type=upvote",headers = headers_by_id[2])
-    print(vote_response.json())
     assert vote_response.status_code == 200
     assert vote_response.json()["vote_type"] == "upvote"
 
@@ -478,11 +477,11 @@ async def test_get_comments_pagination(client, mock_tmdb_media, db_session):
 
     get_comments_response = await client.get(f"/v1/reviews/{review_id}/comments?limit=2",headers = headers_by_id[2])
 
+    assert get_comments_response.status_code == 200
     assert get_comments_response.json()['meta']['total'] == 10
     assert get_comments_response.json()['meta']['limit'] == 2
     assert get_comments_response.json()['meta']['total_pages'] == ceil(get_comments_response.json()['meta']['total']/get_comments_response.json()['meta']['limit'])
     assert get_comments_response.json()['meta']['has_next'] is True
-    assert get_comments_response.status_code == 200
 
 
 @pytest.mark.asyncio
@@ -495,3 +494,194 @@ async def test_get_comments_nonexistent_review(client, db_session):
 
     assert get_comments_response.status_code == 404
     assert get_comments_response.json()['detail'] == "Review not found"
+
+
+@pytest.mark.asyncio
+async def test_get_review_by_id_successful(client, mock_tmdb_media,db_session):
+
+    create_user_response = await create_test_user(client)
+    await verify_user(create_user_response['id'],db_session)
+    token = await login_user(client)
+    headers= auth_headers(token)
+    create_review_response = await create_review(client,
+                                   mock_tmdb_media, 
+                                   headers = headers,
+                                   rating = 4,
+                                   content= "test_review") 
+    # print(create_review_response.json())
+    get_review_response = await client.get(
+        f"/v1/reviews/{create_review_response.json()['id']}",
+        headers = headers
+    )
+    assert get_review_response.status_code == 200
+
+    assert get_review_response.json()['review']['id'] == create_review_response.json()['id']
+    assert get_review_response.json()['review']['user']['username'] == 'test_user'
+    assert get_review_response.json()['review']['content'] == 'test_review'
+
+
+@pytest.mark.asyncio
+async def test_get_review_by_id_nonexistent_review(client,db_session):
+
+    create_user_response = await create_test_user(client)
+    await verify_user(create_user_response['id'],db_session)
+    token = await login_user(client)
+    headers= auth_headers(token)
+
+    get_review_response = await client.get(
+        "/v1/reviews/222222",
+        headers = headers
+    )
+    assert get_review_response.status_code == 404
+
+    assert get_review_response.json()['detail'] == "Review not found"
+
+
+@pytest.mark.asyncio
+async def test_edit_review(client, mock_tmdb_media,db_session):
+
+    create_user_response = await create_test_user(client)
+    await verify_user(create_user_response['id'],db_session)
+    token = await login_user(client)
+    headers= auth_headers(token)
+    create_review_response = await create_review(client,
+                                   mock_tmdb_media, 
+                                   headers = headers,
+                                   rating = 4,
+                                   content= "test_review") 
+
+    assert create_review_response.status_code == 201
+    edit_review_response = await client.patch(
+        f"/v1/reviews/{create_review_response.json()['id']}",json = {"content": "edited_review"},
+        headers = headers
+    )
+    assert edit_review_response.status_code == 200
+
+    assert edit_review_response.json()['id'] == create_review_response.json()['id']
+    assert edit_review_response.json()['content'] == 'edited_review'
+
+    get_review_response = await client.get(
+        f"/v1/reviews/{create_review_response.json()['id']}",
+        headers = headers
+    )
+    assert get_review_response.status_code == 200
+
+    assert get_review_response.json()['review']['id'] == create_review_response.json()['id']
+    assert get_review_response.json()['review']['user']['username'] == 'test_user'
+    assert get_review_response.json()['review']['content'] == 'edited_review'
+    assert get_review_response.json()['review']['rating'] == 4
+
+@pytest.mark.asyncio
+async def test_edit_review_invalid_rating(client, mock_tmdb_media,db_session):
+
+    create_user_response = await create_test_user(client)
+    await verify_user(create_user_response['id'],db_session)
+    token = await login_user(client)
+    headers= auth_headers(token)
+    create_review_response = await create_review(client,
+                                   mock_tmdb_media, 
+                                   headers = headers,
+                                   rating = 4,
+                                   content= "test_review") 
+
+    assert create_review_response.status_code == 201
+    edit_review_response = await client.patch(
+        f"/v1/reviews/{create_review_response.json()['id']}",json = {"rating": "6"},
+        headers = headers
+    )
+    assert edit_review_response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_delete_review(client, mock_tmdb_media,db_session):
+
+    create_user_response = await create_test_user(client)
+    await verify_user(create_user_response['id'],db_session)
+    token = await login_user(client)
+    headers= auth_headers(token)
+    create_review_response = await create_review(client,
+                                   mock_tmdb_media, 
+                                   headers = headers,
+                                   rating = 4,
+                                   content= "test_review") 
+
+    assert create_review_response.status_code == 201
+    delete_response = await client.request("DELETE",
+        f"/v1/reviews/{create_review_response.json()['id']}",
+        headers = headers
+    )
+    assert delete_response.status_code == 204
+    
+    get_review_response = await client.get(
+        f"/v1/reviews/{create_review_response.json()['id']}",
+        headers = headers
+    )
+    assert get_review_response.status_code == 404
+
+    
+@pytest.mark.asyncio
+async def test_edit_comment_successful(client, mock_tmdb_media,db_session):
+
+    create_user_response = await create_test_user(client)
+    await verify_user(create_user_response['id'],db_session)
+    token = await login_user(client)
+    headers= auth_headers(token)
+    create_review_response = await create_review(client,
+                                   mock_tmdb_media, 
+                                   headers = headers,
+                                   rating = 4,
+                                   content= "test_review") 
+
+    assert create_review_response.status_code == 201
+
+    comment_response = await create_comment(client,
+                                            headers=headers,
+                                            review_id=create_review_response.json()['id'],
+                                            content= "test_comment")
+    assert comment_response.status_code == 201
+
+    edit_comment_response = await client.patch(
+        f"/v1/reviews/{comment_response.json()['id']}/comments",json = {"content":"edited_comment"},
+        headers=headers
+    )
+    assert edit_comment_response.status_code == 200
+    assert edit_comment_response.json()['content'] == "edited_comment"
+    
+
+
+@pytest.mark.asyncio
+async def test_delete_comment(client, mock_tmdb_media,db_session):
+
+    create_user_response = await create_test_user(client)
+    await verify_user(create_user_response['id'],db_session)
+    token = await login_user(client)
+    headers= auth_headers(token)
+    create_review_response = await create_review(client,
+                                   mock_tmdb_media, 
+                                   headers = headers,
+                                   rating = 4,
+                                   content= "test_review") 
+
+    assert create_review_response.status_code == 201
+
+    comment_response = await create_comment(client,
+                                            headers=headers,
+                                            review_id=create_review_response.json()['id'],
+                                            content= "test_comment")
+    assert comment_response.status_code == 201
+
+    get_comments_response = await client.get(f"/v1/reviews/{create_review_response.json()['id']}/comments",headers=headers)
+    assert get_comments_response.json()['meta']['total'] == 1
+
+    delete_response = await client.request("DELETE",
+        f"/v1/reviews/{comment_response.json()['id']}/comments",
+        headers = headers
+    )
+    assert delete_response.status_code == 204
+
+    get_comments_response = await client.get(f"/v1/reviews/{create_review_response.json()['id']}/comments",headers=headers)
+    assert get_comments_response.status_code == 200
+    assert get_comments_response.json()['meta']['total'] == 0
+    
+
+
