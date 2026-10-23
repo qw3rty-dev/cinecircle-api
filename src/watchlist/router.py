@@ -28,8 +28,9 @@ async def add_to_watchlist(
 ):
     try:
         client = request.app.state.http_client
+        redis_client = request.app.state.redis
         return await watchlist_service.add_to_watchlist(
-            data.tmdb_id, data.media_type, db, current_user, client
+            data.tmdb_id, data.media_type, db, current_user, client, redis_client
         )
 
     except TMDBServiceError:

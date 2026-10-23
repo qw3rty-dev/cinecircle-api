@@ -1,4 +1,5 @@
 import httpx
+import redis.asyncio as redis
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -72,14 +73,15 @@ async def get_or_fetch(
     func,
     media_type: MediaType,
     client: httpx.AsyncClient,
+    redis_client: redis.Redis,
     search: str | None = None,
     page: int = 1,
 ):
     results = []
     if search:
-        tmdb_response = await func(client, search, page)
+        tmdb_response = await func(client, redis_client, search, page)
     else:
-        tmdb_response = await func(client, page)
+        tmdb_response = await func(client, redis_client, page)
     search_results = {
         "query": search,
         "page": page,
@@ -93,7 +95,6 @@ async def get_or_fetch(
         movie_info = get_media_info(item, media_type.value, genres_info)
         results.append(movie_info)
     search_results["results"] = results
-
     return search_results
 
 
@@ -104,25 +105,26 @@ class MediaService:
         media_type: SearchMediaType,
         page: int,
         client: httpx.AsyncClient,
+        redis_client: redis.Redis,
         db: AsyncSession,
     ):
 
         if media_type == SearchMediaType.movie:
             search_results = await get_or_fetch(
-                db, search_movie, SearchMediaType.movie, client, search, page
+                db, search_movie, SearchMediaType.movie, client, redis_client, search, page
             )
 
         if media_type == SearchMediaType.tv:
             search_results = await get_or_fetch(
-                db, search_tv, SearchMediaType.tv, client, search, page
+                db, search_tv, SearchMediaType.tv, client, redis_client, search, page
             )
 
         if media_type == SearchMediaType.all:
             movie = await get_or_fetch(
-                db, search_movie, SearchMediaType.movie, client, search, page
+                db, search_movie, SearchMediaType.movie, client, redis_client, search, page
             )
             tv = await get_or_fetch(
-                db, search_tv, SearchMediaType.tv, client, search, page
+                db, search_tv, SearchMediaType.tv, client, redis_client, search, page
             )
             search_results = {
                 "query": search,
@@ -135,31 +137,40 @@ class MediaService:
         return search_results
 
     async def trending_movies(
-        self, page: int, client: httpx.AsyncClient, db: AsyncSession
+        self, page: int, client: httpx.AsyncClient, redis_client: redis.Redis, db: AsyncSession
     ):
 
         results = await get_or_fetch(
-            db,
+            db=db,
             func=trending_movies,
             media_type=MediaType.movie,
             client=client,
+            redis_client=redis_client,
             page=page,
         )
         return results
 
-    async def trending_tv(self, page: int, client: httpx.AsyncClient, db: AsyncSession):
+    async def trending_tv(self, page: int, client: httpx.AsyncClient, redis_client: redis.Redis, db: AsyncSession):
 
-        results = await get_or_fetch(db, trending_tv, MediaType.tv, client, page=page)
+        results = await get_or_fetch(
+            db=db,
+            func=trending_tv,
+            media_type=MediaType.tv,
+            client=client,
+            redis_client=redis_client,
+            page=page,
+        )
         return results
-
+    
     async def get_by_id(
         self,
         tmdb_id: int,
         media_type: MediaType,
         client: httpx.AsyncClient,
+        redis_client:redis.Redis,
         db: AsyncSession,
     ):
-        media = await get_by_id(client, tmdb_id, media_type)
+        media = await get_by_id(client, redis_client, tmdb_id, media_type)
         genres_info = await get_genre_names(db)
         return get_media_info(media, media_type.value, genres_info)
 
@@ -217,7 +228,7 @@ class MediaService:
 
     @staticmethod
     async def get_or_create_media(
-        tmdb_id: int, media_type: MediaType, db: AsyncSession, client: httpx.AsyncClient
+        tmdb_id: int, media_type: MediaType, db: AsyncSession, client: httpx.AsyncClient, redis_client: redis.Redis
     ):
         existing_media = await db.scalar(
             select(Media).where(
@@ -227,7 +238,7 @@ class MediaService:
         if existing_media:
             return existing_media.id
 
-        media = await get_by_id(client, tmdb_id, media_type)
+        media = await get_by_id(client, redis_client, tmdb_id, media_type)
         genres_info = await get_genre_names(db)
         data = get_media_info(media, media_type.value, genres_info)
         new_media = Media(

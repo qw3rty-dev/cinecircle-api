@@ -38,7 +38,8 @@ async def search_media(
 ):
     try:
         client = request.app.state.http_client
-        results = await media_service.search(search, media_type, page, client, db)
+        redis_client = request.app.state.redis
+        results = await media_service.search(search, media_type, page, client, redis_client, db)
         return results
 
     except TMDBServiceError:
@@ -58,7 +59,8 @@ async def trending_movies(
 ):
     try:
         client = request.app.state.http_client
-        results = await media_service.trending_movies(page, client, db)
+        redis_client = request.app.state.redis
+        results = await media_service.trending_movies(page, client, redis_client, db)
         return results
     except TMDBServiceError:
         raise HTTPException(
@@ -75,7 +77,8 @@ async def trending_tv(
 ):
     try:
         client = request.app.state.http_client
-        results = await media_service.trending_tv(page, client, db)
+        redis_client = request.app.state.redis
+        results = await media_service.trending_tv(page, client, redis_client, db)
         return results
     except TMDBServiceError:
         raise HTTPException(
@@ -92,7 +95,8 @@ async def get_by_id(
 ):
     try:
         client = request.app.state.http_client
-        results = await media_service.get_by_id(id, media_type, client, db)
+        redis_client = request.app.state.redis
+        results = await media_service.get_by_id(id, media_type, client, redis_client, db)
         return results
     except TMDBServiceError:
         raise HTTPException(

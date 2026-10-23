@@ -11,7 +11,6 @@ async def test_add_to_watchlist_requires_authentication(client, mock_tmdb_media)
             "media_type": "movie",
         },
     )
-    print(response.json())
     assert response.status_code == 401
 
 

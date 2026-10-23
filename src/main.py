@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 import httpx
+import redis.asyncio as redis
 from fastapi import FastAPI
 
 from src.api.v1.router import api_router_v1
@@ -11,11 +12,13 @@ from src.scheduler.scheduler import configure_scheduler, scheduler
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.http_client = httpx.AsyncClient()
+    app.state.redis = redis.Redis(host="localhost",port=6379,db=0,decode_responses=True)
     configure_scheduler()
     scheduler.start()
     yield
     scheduler.shutdown()
     await app.state.http_client.aclose()
+    await app.state.redis.aclose()
 
 
 app = FastAPI(

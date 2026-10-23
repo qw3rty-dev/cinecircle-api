@@ -27,8 +27,9 @@ async def get_recommendations(
 
     try:
         client = request.app.state.http_client
+        redis_client = request.app.state.redis
         return await feed_services.get_recommendations(
-            media_type, page, db, client, current_user
+            media_type, page, db, client, redis_client, current_user
         )
     except TMDBServiceError:
         raise HTTPException(

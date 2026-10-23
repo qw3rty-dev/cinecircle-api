@@ -1,4 +1,5 @@
 import httpx
+import redis.asyncio as redis
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -162,6 +163,7 @@ async def recommendations(
     page: int,
     db: AsyncSession,
     client: httpx.AsyncClient,
+    redis_client: redis,
     current_user: User,
 ):
     candidates = await recommendation_candidates(media_type, db, current_user)
@@ -171,7 +173,7 @@ async def recommendations(
     if not 1 <= page <= len(candidates_items):
         return {"page": page, "results": []}
     (selected_id, selected_media_type) = candidates_items[page - 1]
-    results = (await get_recommendation(selected_media_type, selected_id, client))[
+    results = (await get_recommendation(selected_media_type, selected_id, redis_client, client))[
         "results"
     ]
     watched = await watched_ids(db, current_user)
@@ -194,9 +196,10 @@ class FeedService:
         page,
         db: AsyncSession,
         client: httpx.AsyncClient,
+        redis_client: redis,
         current_user: User,
     ):
-        return await recommendations(media_type, page, db, client, current_user)
+        return await recommendations(media_type, page, db, client,redis_client, current_user)
 
     async def following_activity_reviews(
         self, limit: int, page: int, db: AsyncSession, current_user: User

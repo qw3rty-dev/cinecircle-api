@@ -62,7 +62,13 @@ async def client(db_session):
     app.dependency_overrides[get_db] = override_get_db
     mock_http_client = MagicMock()
     mock_http_client.get = AsyncMock()
+    
+    mock_redis = MagicMock()
+    mock_redis.get = AsyncMock(return_value=None)
+    mock_redis = AsyncMock(return_value=True)
+
     app.state.http_client = mock_http_client
+    app.state.redis = mock_redis
 
     try:
         async with AsyncClient(
@@ -73,6 +79,7 @@ async def client(db_session):
     finally:
         app.dependency_overrides.clear()
         del app.state.http_client
+        del app.state.redis
 
 
 async def create_test_user(client:AsyncClient,

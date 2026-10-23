@@ -2,11 +2,12 @@ import asyncio
 import os
 
 import httpx
+import redis.asyncio as redis
 from dotenv import load_dotenv
 
 from src.enums import MediaType
+from src.services.redis_service.cache_media import get_cache, set_cache
 
-from .cache_service import load_cache, save_cache, search_by_id, search_in_cache
 from .exceptions import TMDBServiceError
 
 load_dotenv()
@@ -16,7 +17,7 @@ RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
 MAX_RETRIES = 3
 
 
-async def request_data(client: httpx.AsyncClient, url, params: dict | None = None):
+async def request_data(client: httpx.AsyncClient, url:str , params: dict | None = None):
     headers = {
         "User-Agent": "CineSearch/1.0 (+https://example.com)",
         "accept": "application/json",
@@ -72,25 +73,26 @@ async def get_genres(client: httpx.AsyncClient):
 
 
 async def get_recommendation(
-    media_type: MediaType, tmdb_id: int, client: httpx.AsyncClient
+    media_type: MediaType, tmdb_id: int, redis_client:redis, client: httpx.AsyncClient
 ):
-    cache = load_cache()
-    cached_result = search_in_cache(
-        cache, f"recommendation:{tmdb_id}", media_type.value
-    )
+    
+    key = f"recommendation:{tmdb_id}:{media_type.value}"
+    cached_result = await get_cache(key,redis_client)
     if cached_result is not None:
         return cached_result
+    
     url = f"https://api.themoviedb.org/3/{media_type.value}/{tmdb_id}/recommendations?language=en-US&page=1"
     data = await request_data(client, url)
-    key = f"recommendation:{tmdb_id}:{media_type.value}"
-    save_cache(cache, data, 24, key)
+    await set_cache(key,86400,data,redis_client)
+
     return data
 
 
-async def search_tv(client: httpx.AsyncClient, search: str, page: int = 1):
+async def search_tv(client: httpx.AsyncClient, redis_client:redis, search: str, page: int = 1):
+
     search = search.lower().strip()
-    cache = load_cache()
-    cached_result = search_in_cache(cache, f"search:{search}", "tv", page)
+    key = f"search:{search}:tv:{page}"
+    cached_result = await get_cache(key,redis_client)
     if cached_result is not None:
         return cached_result
 
@@ -98,16 +100,16 @@ async def search_tv(client: httpx.AsyncClient, search: str, page: int = 1):
     params = {"query": search, "page": page}
 
     data = await request_data(client, url, params)
-    key = f"search:{search}:tv:{page}"
-    save_cache(cache, data, 2, key)
+    await set_cache(key,7200,data,redis_client)
 
     return data
 
 
-async def search_movie(client: httpx.AsyncClient, search: str, page: int = 1):
+async def search_movie(client: httpx.AsyncClient, redis_client:redis, search: str, page: int = 1):
+
     search = search.lower().strip()
-    cache = load_cache()
-    cached_result = search_in_cache(cache, f"search:{search}", "movie", page)
+    key = f"search:{search}:movie:{page}"
+    cached_result = await get_cache(key,redis_client)
     if cached_result is not None:
         return cached_result
 
@@ -115,18 +117,15 @@ async def search_movie(client: httpx.AsyncClient, search: str, page: int = 1):
     params = {"query": search, "page": page}
 
     data = await request_data(client, url, params)
-    key = f"search:{search}:movie:{page}"
-    save_cache(cache, data, 2, key)
+    await set_cache(key,7200,data,redis_client)
 
     return data
 
 
-async def trending_movies(client: httpx.AsyncClient, page: int = 1):
+async def trending_movies(client: httpx.AsyncClient, redis_client:redis, page: int = 1):
 
-    cache = load_cache()
-    cached_result = search_in_cache(
-        cache=cache, search="trending", type="movie", page=page
-    )
+    key = f"trending:movie:{page}"
+    cached_result = await get_cache(key,redis_client)
     if cached_result is not None:
         return cached_result
 
@@ -134,16 +133,14 @@ async def trending_movies(client: httpx.AsyncClient, page: int = 1):
     params = {"page": page}
     data = await request_data(client, url, params)
     key = f"trending:movie:{page}"
-    save_cache(cache, data, 1, key)
+    await set_cache(key,3600,data,redis_client)
     return data
 
 
-async def trending_tv(client: httpx.AsyncClient, page: int = 1):
+async def trending_tv(client: httpx.AsyncClient, redis_client:redis, page: int = 1):
 
-    cache = load_cache()
-    cached_result = search_in_cache(
-        cache=cache, search="trending", type="tv", page=page
-    )
+    key = f"trending:tv:{page}"
+    cached_result = await get_cache(key,redis_client)
     if cached_result is not None:
         return cached_result
 
@@ -151,15 +148,18 @@ async def trending_tv(client: httpx.AsyncClient, page: int = 1):
     params = {"page": page}
     data = await request_data(client, url, params)
     key = f"trending:tv:{page}"
-    save_cache(cache, data, 1, key)
+    await set_cache(key,3600,data,redis_client)
     return data
 
 
-async def get_by_id(client: httpx.AsyncClient, tmdb_id: int, media_type: MediaType):
-    cache = load_cache()
-    media = search_by_id(cache=cache, tmdb_id=tmdb_id, media_type=media_type)
-    if media is not None:
-        return media
+async def get_by_id(client: httpx.AsyncClient, redis_client:redis, tmdb_id: int, media_type: MediaType):
+
+    key = f"{tmdb_id}:{media_type.value}"
+    cached_result = await get_cache(key,redis_client)
+    if cached_result is not None:
+        return cached_result
+    
     url = f"https://api.themoviedb.org/3/{media_type.value}/{tmdb_id}"
-    media = await request_data(client, url)
-    return media
+    data = await request_data(client, url)
+    await set_cache(key,3600,data,redis_client)
+    return data

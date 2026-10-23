@@ -1,4 +1,5 @@
 import httpx
+import redis.asyncio as redis
 from fastapi import HTTPException, status
 from sqlalchemy import exists, func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -125,12 +126,13 @@ async def extract_reviews_by_tmdb_id(
     limit: int,
     page: int,
     db: AsyncSession,
-    client: httpx.AsyncClient
+    client: httpx.AsyncClient,
+    redis_client: redis.Redis
 ):
 
     media = await db.scalar(select(Media).where(Media.tmdb_id == tmdb_id, Media.media_type == media_type))
     if not media:
-        media_raw = await get_by_id(client, tmdb_id, media_type)
+        media_raw = await get_by_id(client,redis_client, tmdb_id, media_type)
         media = MediaMetadata(
             tmdb_id= media_raw.get('id'),
             title = media_raw.get('title') or media_raw.get('name'),
@@ -223,10 +225,11 @@ class ReviewService:
         db: AsyncSession,
         current_user: User,
         client: httpx.AsyncClient,
+        redis_client:redis.Redis
     ):
 
         media_id = await MediaService.get_or_create_media(
-            tmdb_id, media_type, db, client
+            tmdb_id, media_type, db, client, redis_client
         )
 
         review = Review(
@@ -433,11 +436,12 @@ class ReviewService:
         page: int,
         db: AsyncSession,
         current_user: User | None,
-        client: httpx.AsyncClient
+        client: httpx.AsyncClient,
+        redis_client:redis.Redis
     ):
 
         reviews, media, total = await extract_reviews_by_tmdb_id(
-            tmdb_id,media_type, search, author, rating, sort_by, sort_order, limit, page, db, client
+            tmdb_id,media_type, search, author, rating, sort_by, sort_order, limit, page, db, client, redis_client
         )
         review_ids = [review.id for review in reviews]
         vote_counts, my_vote_types = await extract_votes_of_reviews(

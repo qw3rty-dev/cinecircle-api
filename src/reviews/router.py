@@ -49,6 +49,7 @@ async def add_review(
 ):
     try:
         client = request.app.state.http_client
+        redis_client = request.app.state.redis
         return await review_service.add_review(
             data.tmdb_id,
             data.media_type,
@@ -57,6 +58,7 @@ async def add_review(
             db,
             current_user,
             client,
+            redis_client
         )
 
     except TMDBServiceError:
@@ -115,6 +117,7 @@ async def get_media_reviews_by_tmdb_id(
 ):
     try:
         client = request.app.state.http_client
+        redis_client = request.app.state.redis
         return await review_service.get_reviews(
             tmdb_id,
             media_type,
@@ -128,6 +131,7 @@ async def get_media_reviews_by_tmdb_id(
             db,
             current_user,
             client,
+            redis_client
         )
     except TMDBServiceError:
         raise HTTPException(

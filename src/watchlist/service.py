@@ -1,4 +1,5 @@
 import httpx
+import redis.asyncio as redis
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -19,10 +20,11 @@ class WatchListService:
         db: AsyncSession,
         current_user: User,
         client: httpx.AsyncClient,
+        redis_client: redis.Redis
     ):
 
         media_id = await MediaService.get_or_create_media(
-            tmdb_id, media_type, db, client
+            tmdb_id, media_type, db, client, redis_client
         )
         watchlist_obj = Watchlist(media_id=media_id, user_id=current_user.id)
 
