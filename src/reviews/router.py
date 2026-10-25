@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.rate_limiting import limiter
 from src.db import get_db
 from src.enums import (
     MediaType,
@@ -41,6 +42,8 @@ review_service = ReviewService()
 
 
 @router.post("", response_model=MyReviewResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
+@limiter.limit("3/second")
 async def add_review(
     request: Request,
     data: CreateReviewRequest,
@@ -73,7 +76,10 @@ async def add_review(
     response_model=NewCommentResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("30/minute")
+@limiter.limit("3/second")
 async def comment(
+    request: Request,
     review_id: int,
     comment: CreateComment,
     db: AsyncSession = Depends(get_db),
@@ -86,7 +92,10 @@ async def comment(
 @router.put(
     "/{review_id}/vote", response_model=VoteResponse, status_code=status.HTTP_200_OK
 )
+@limiter.limit("30/minute")
+@limiter.limit("3/second")
 async def vote(
+    request: Request,
     review_id: int,
     vote_type: VoteType,
     db: AsyncSession = Depends(get_db),
@@ -101,6 +110,8 @@ async def vote(
     response_model=PaginatedReviewResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def get_media_reviews_by_tmdb_id(
     request: Request,
     tmdb_id: int,
@@ -143,7 +154,10 @@ async def get_media_reviews_by_tmdb_id(
 @router.get(
     "/me", response_model=PaginatedMyReviewResponse, status_code=status.HTTP_200_OK
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def get_my_reviews(
+    request: Request,
     search: str | None = Query(default=None),
     rating: Rating | None = Query(default=None, ge=1, le=5),
     sort_by: SortMyReviews = Query(default=SortMyReviews.created_at),
@@ -161,7 +175,10 @@ async def get_my_reviews(
 @router.get(
     "/{review_id}", response_model=ReviewResponse, status_code=status.HTTP_200_OK
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def get_review(
+    request: Request,
     review_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional),
@@ -174,7 +191,10 @@ async def get_review(
     response_model=PaginatedCommentResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def get_comments(
+    request: Request,
     review_id: int,
     search: str | None = Query(default=None),
     sort_by: SortComments = Query(default=SortComments.created_at),
@@ -192,7 +212,10 @@ async def get_comments(
 @router.patch(
     "/{review_id}", response_model=MyReviewResponse, status_code=status.HTTP_200_OK
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def edit_review(
+    request: Request,
     review_id: int,
     update: UpdateReviewRequest,
     db: AsyncSession = Depends(get_db),
@@ -206,7 +229,10 @@ async def edit_review(
     response_model=CommentResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def edit_comment(
+    request: Request,
     comment_id: int,
     update: UpdateCommentRequest,
     db: AsyncSession = Depends(get_db),
@@ -216,7 +242,10 @@ async def edit_comment(
 
 
 @router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def delete_review(
+    request: Request,
     review_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_verified_user),
@@ -225,7 +254,10 @@ async def delete_review(
 
 
 @router.delete("/{comment_id}/comments", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def delete_comment(
+    request: Request,
     comment_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_verified_user),

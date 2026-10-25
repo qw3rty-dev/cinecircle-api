@@ -38,6 +38,7 @@ requests==2.34.2
 resend==2.49.1
 redis==8.1.0
 ruff==0.16.10
+slowapi==0.1.10
 SQLAlchemy==2.0.52
 starlette==1.6.0
 typing-inspection==0.4.4

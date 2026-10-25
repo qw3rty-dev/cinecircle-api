@@ -4,7 +4,7 @@ from typing import Any
 import redis.asyncio as redis
 
 
-async def set_cache(key:str, ttl: int, value: Any, redis_client:redis):
+async def set_cache(key:str, ttl: int, value: Any, redis_client:redis.Redis):
     try:
         json_value = json.dumps(value)
         await redis_client.set(key, json_value, ex=ttl)
@@ -13,7 +13,7 @@ async def set_cache(key:str, ttl: int, value: Any, redis_client:redis):
         print(f"Log: Redis_error {e}")
 
         
-async def get_cache(key:str,redis_client:redis):
+async def get_cache(key:str,redis_client:redis.Redis):
     try:
         cache = await redis_client.get(key)
         if cache is None:

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.schemas import MessageResponse
+from src.core.rate_limiting import limiter
 from src.db import get_db
 from src.enums import MediaActivityType, MediaType, SearchMediaType
 from src.models import User
@@ -29,6 +30,8 @@ media_service = MediaService()
     response_model=SearchMovieResponse | SearchTvResponse | SearchAllResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("60/minute")
+@limiter.limit("5/second")
 async def search_media(
     request: Request,
     search: str,
@@ -54,6 +57,8 @@ async def search_media(
     response_model=TrendingMovieResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("60/minute")
+@limiter.limit("5/second")
 async def trending_movies(
     request: Request, page: int = Query(default=1), db: AsyncSession = Depends(get_db)
 ):
@@ -72,6 +77,8 @@ async def trending_movies(
 @router.get(
     "/trending/tv", response_model=TrendingTvResponse, status_code=status.HTTP_200_OK
 )
+@limiter.limit("60/minute")
+@limiter.limit("5/second")
 async def trending_tv(
     request: Request, page: int = Query(default=1), db: AsyncSession = Depends(get_db)
 ):
@@ -90,6 +97,8 @@ async def trending_tv(
 @router.get(
     "/{id}", response_model=MovieResult | TvResult, status_code=status.HTTP_200_OK
 )
+@limiter.limit("60/minute")
+@limiter.limit("5/second")
 async def get_by_id(
     request: Request, id: int, media_type: MediaType, db: AsyncSession = Depends(get_db)
 ):
@@ -110,6 +119,8 @@ async def get_by_id(
     response_model=MessageResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("60/minute")
+@limiter.limit("5/second")
 async def set_media_activity(
     request: Request,
     tmdb_id: int,

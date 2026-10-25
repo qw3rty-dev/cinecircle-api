@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.rate_limiting import limiter
 from src.db import get_db
 from src.enums import SortOrder, SortWatchlist, WatchlistStatus
 from src.models import User
@@ -20,6 +21,8 @@ watchlist_service = WatchListService()
 
 
 @router.post("", response_model=WatchlistResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def add_to_watchlist(
     data: AddToWatchlistRequest,
     request: Request,
@@ -40,7 +43,10 @@ async def add_to_watchlist(
 @router.get(
     "", response_model=PaginatedWatchlistResponse, status_code=status.HTTP_200_OK
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def fetch_watchlist(
+    request: Request,
     search: str | None = Query(default=None),
     status: WatchlistStatus | None = Query(default=None),
     sort_by: SortWatchlist = Query(default=SortWatchlist.created_at),
@@ -59,7 +65,10 @@ async def fetch_watchlist(
 @router.patch(
     "/{id}/status", response_model=WatchlistResponse, status_code=status.HTTP_200_OK
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def change_watching_status(
+    request: Request,
     id: int,
     update: UpdateWatchlistRequest,
     db: AsyncSession = Depends(get_db),
@@ -70,7 +79,10 @@ async def change_watching_status(
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def remove_from_watchlist(
+    request: Request,
     id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_verified_user),

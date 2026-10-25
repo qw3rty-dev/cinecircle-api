@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.rate_limiting import limiter
 from src.db import get_db
 from src.enums import MediaType
 from src.models import User
@@ -17,6 +18,8 @@ feed_services = FeedService()
 
 
 @router.get("", response_model=RecommendationResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("30/minute")
+@limiter.limit("3/second")
 async def get_recommendations(
     request: Request,
     media_type: MediaType | None = Query(default=None),
@@ -43,7 +46,10 @@ async def get_recommendations(
     response_model=PaginatedReviewResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("30/minute")
+@limiter.limit("3/second")
 async def get_following_activity(
+    request: Request,
     limit: int = Query(default=20, ge=1, le=100),
     page: int = Query(default=1, ge=1),
     current_user: User = Depends(get_current_verified_user),

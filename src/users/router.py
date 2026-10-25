@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.schemas import MessageResponse
+from src.core.rate_limiting import limiter
 from src.db import get_db
 from src.enums import Action, BulkAction, SortOrder, SortUsers
 from src.models import User
@@ -25,7 +26,10 @@ user_service = UserService()
     response_model=MessageResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("30/minute")
+@limiter.limit("3/second")
 async def follow_user(
+    request: Request,
     user_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_verified_user),
@@ -36,7 +40,10 @@ async def follow_user(
 @router.get(
     "/search", response_model=PaginatedUserResponse, status_code=status.HTTP_200_OK
 )
+@limiter.limit("60/minute")
+@limiter.limit("5/second")
 async def search_users(
+    request: Request,
     search: str,
     limit: int = Query(default=20, ge=1, le=100),
     page: int = Query(default=1, ge=1),
@@ -52,7 +59,10 @@ async def search_users(
     response_model=PaginatedFollowRequestResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def show_follow_requests(
+    request: Request,
     search: str | None = None,
     limit: int = Query(default=20, ge=1, le=100),
     page: int = Query(default=1, ge=1),
@@ -69,7 +79,10 @@ async def show_follow_requests(
     response_model=PaginatedFollowRequestResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def show_follow_requests_sent(
+    request: Request,
     search: str | None = None,
     limit: int = Query(default=20, ge=1, le=100),
     page: int = Query(default=1, ge=1),
@@ -88,7 +101,10 @@ async def show_follow_requests_sent(
     response_model=PaginatedUserResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def show_follower_list(
+    request: Request,
     user_id: int,
     search: str | None = None,
     limit: int = Query(default=20, ge=1, le=100),
@@ -108,7 +124,10 @@ async def show_follower_list(
     response_model=PaginatedUserResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def show_following_list(
+    request: Request,
     user_id: int,
     search: str | None = None,
     limit: int = Query(default=20, ge=1, le=100),
@@ -124,7 +143,10 @@ async def show_following_list(
 
 
 @router.get("/{user_id}", response_model=UserProfile, status_code=status.HTTP_200_OK)
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def show_user_profile(
+    request: Request,
     user_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -138,7 +160,10 @@ async def show_user_profile(
     response_model=MessageResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("30/minute")
+@limiter.limit("5/second")
 async def request_action_bulk(
+    request: Request,
     action: BulkAction,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_verified_user),
@@ -151,7 +176,10 @@ async def request_action_bulk(
     response_model=MessageResponse,
     status_code=status.HTTP_200_OK,
 )
+@limiter.limit("120/minute")
+@limiter.limit("10/second")
 async def request_action(
+    request: Request,
     request_id: int,
     action: Action,
     db: AsyncSession = Depends(get_db),
@@ -161,7 +189,10 @@ async def request_action(
 
 
 @router.patch("/me/privacy", response_model=PrivacyPreference)
+@limiter.limit("60/minute")
+@limiter.limit("5/second")
 async def privacy_preferences(
+    request: Request,
     preference: PrivacyPreference,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -172,7 +203,10 @@ async def privacy_preferences(
 
 
 @router.delete("/{user_id}/follow", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("60/minute")
+@limiter.limit("5/second")
 async def unfollow_user_or_unsend_request(
+    request: Request,
     user_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_verified_user),
@@ -180,7 +214,10 @@ async def unfollow_user_or_unsend_request(
     return await user_service.unfollow_user_or_unsend_request(user_id, db, current_user)
 
 @router.delete("/me/{user_id}/follow", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("60/minute")
+@limiter.limit("5/second")
 async def remove_follower(
+    request: Request,
     user_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_verified_user),
