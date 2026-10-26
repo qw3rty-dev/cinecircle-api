@@ -99,7 +99,7 @@ class AdminService:
         query = query.limit(limit).offset(offset)
 
         requests = []
-        users = (await db.scalars(query.order_by(User.verification_expires_at.desc()))).all()
+        users = (await db.scalars(query)).all()
 
         for user in users:
             requests.append({

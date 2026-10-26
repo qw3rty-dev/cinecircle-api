@@ -69,7 +69,7 @@ async def show_verification_requests(
     sort_order: SortOrder = Query(default=SortOrder.desc),
     sort_by: SortVerificationRequests = Query(default=SortVerificationRequests.request_created_at),
     db: AsyncSession = Depends(get_db),
-    # current_admin: User = Depends(get_current_admin),
+    current_admin: User = Depends(get_current_admin)
 ):
     return await admin_service.show_verification_requests(search,expired,private,limit,page,sort_by,sort_order,db)
     
