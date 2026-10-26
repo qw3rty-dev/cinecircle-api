@@ -77,6 +77,12 @@ class SortUsers(str, Enum):
     created_at = "created_at"
     last_login = "last_login"
 
+class SortVerificationRequests(str, Enum):
+    username = "username"
+    created_at = "created_at"
+    last_login = "last_login"
+    request_created_at = "request_created_at"
+
 
 class MediaActivityType(str, Enum):
     watched = "watched"
